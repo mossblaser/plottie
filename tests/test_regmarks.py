@@ -367,43 +367,37 @@ class TestFindRegmarks(object):
         ],
     ])
     def test_restrict_parameters(self, outlines):
-        with pytest.raises(ValueError):
-            find_regmarks(
-                outlines,
-                required_box_size=5,
-                required_line_length=20,
-                required_line_thickness=2,
-            )
+        assert find_regmarks(
+            outlines,
+            required_box_size=5,
+            required_line_length=20,
+            required_line_thickness=2,
+        ) is None
     
     def test_no_lines(self):
-        with pytest.raises(ValueError):
-            find_regmarks([])
+        assert find_regmarks([]) is None
     
     def test_just_the_box_isnt_enough(self):
-        with pytest.raises(ValueError):
-            find_regmarks([
-                ((0, 0, 0, 1), 4, [(22, 12), (23, 12), (23, 13), (22, 13), (22, 12)]),
-            ])
+        assert find_regmarks([
+            ((0, 0, 0, 1), 4, [(22, 12), (23, 12), (23, 13), (22, 13), (22, 12)]),
+        ]) is None
     
     def test_just_one_bracket_isnt_enough(self):
-        with pytest.raises(ValueError):
-            find_regmarks([
-                ((0, 0, 0, 1), 4, [(22, 12), (23, 12), (23, 13), (22, 13), (22, 12)]),
-                ((0, 0, 0, 1), 2, [(90, 11), (100, 11), (100, 21)]),
-            ])
+        assert find_regmarks([
+            ((0, 0, 0, 1), 4, [(22, 12), (23, 12), (23, 13), (22, 13), (22, 12)]),
+            ((0, 0, 0, 1), 2, [(90, 11), (100, 11), (100, 21)]),
+        ]) is None
     
     def test_line_lengths_must_be_same(self):
-        with pytest.raises(ValueError):
-            find_regmarks([
-                ((0, 0, 0, 1), 4, [(22, 12), (23, 12), (23, 13), (22, 13), (22, 12)]),
-                ((0, 0, 0, 1), 2, [(90, 11), (100, 11), (100, 21)]),
-                ((0, 0, 0, 1), 2, [(21, 50), (21, 70), (41, 70)]),
-            ])
+        assert find_regmarks([
+            ((0, 0, 0, 1), 4, [(22, 12), (23, 12), (23, 13), (22, 13), (22, 12)]),
+            ((0, 0, 0, 1), 2, [(90, 11), (100, 11), (100, 21)]),
+            ((0, 0, 0, 1), 2, [(21, 50), (21, 70), (41, 70)]),
+        ]) is None
     
     def test_line_thickness_must_be_the_same(self):
-        with pytest.raises(ValueError):
-            find_regmarks([
-                ((0, 0, 0, 1), 4, [(22, 12), (23, 12), (23, 13), (22, 13), (22, 12)]),
-                ((0, 0, 0, 1), 4, [(80, 12), (100, 12), (100, 32)]),
-                ((0, 0, 0, 1), 2, [(21, 50), (21, 70), (41, 70)]),
-            ])
+        assert find_regmarks([
+            ((0, 0, 0, 1), 4, [(22, 12), (23, 12), (23, 13), (22, 13), (22, 12)]),
+            ((0, 0, 0, 1), 4, [(80, 12), (100, 12), (100, 32)]),
+            ((0, 0, 0, 1), 2, [(21, 50), (21, 70), (41, 70)]),
+        ]) is None

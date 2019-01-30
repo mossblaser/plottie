@@ -295,17 +295,12 @@ def find_regmarks(outlines,
 
     Returns
     -------
-    spec : :py:class:`RegmarkSpecification`
+    spec : :py:class:`RegmarkSpecification` or None
         If registration marks are found, a description of those marks is
         returned. If multiple sets of registration marks are found, the
         outermost set will be assumed.
-    
-    Raises
-    ------
-    ValueError
-        If no registration marks are found, a :py:exc:`ValueError` is raised
-        with a message which also mentions what parts of the registration mark
-        were found.
+        
+        If no regmarks were found, None is returned.
     """
     # A list of all boxes [RegmarkBox, ...]
     boxes = []
@@ -352,14 +347,7 @@ def find_regmarks(outlines,
     
     # Return the outer-most regmarks found
     if not regmarks:
-        raise ValueError(
-            "No regmarks found in SVG (found {} boxes, {} lower-left brackets "
-            "and {} upper-right brackets which don't match up correctly).".format(
-                len(boxes),
-                sum(len(brackets) for brackets in bl_brackets.values()),
-                sum(len(brackets) for brackets in tr_brackets.values()),
-            )
-        )
+        None
     else:
         return min(regmarks, key=lambda r: (
             # Outermost
