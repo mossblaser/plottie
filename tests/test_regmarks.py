@@ -26,7 +26,7 @@ class TestClassifyRegmarkComponent(object):
     @pytest.mark.parametrize("x,y,size,open_line", [
         (x, y, size,
             rotate_array(
-                [(x, y), (x+size, y), (x+size, y+size), (x, y+size)],
+                [(x, y), (x+size+float_error, y), (x+size+float_error, y+size-float_error), (x, y+size-float_error)],
                 rotation,
             )[::order]
         )
@@ -34,6 +34,7 @@ class TestClassifyRegmarkComponent(object):
         for size in [5, 8.5]
         for rotation in range(4)
         for order in [1, -1]
+        for float_error in [0, 0.000001]
     ])
     def test_box(self, thickness, x, y, size, open_line):
         # Close the line
@@ -46,16 +47,17 @@ class TestClassifyRegmarkComponent(object):
         ) == RegmarkBox(
             x=x - (thickness/2.0),
             y=y - (thickness/2.0),
-            size=size + thickness,
+            size=pytest.approx(size + thickness),
             thickness=thickness,
         )
     
     @pytest.mark.parametrize("thickness", [0.5, 1])
     @pytest.mark.parametrize("x,y,length,line", [
-        (x, y, length, [(x, y-length), (x, y), (x+length, y)][::order])
+        (x, y, length, [(x, y-length+float_error), (x, y), (x+length-float_error, y)][::order])
         for x, y in [(0, 0), (50, 100)]
         for length in [15.5, 20]
         for order in [1, -1]
+        for float_error in [0, 0.000001]
     ])
     def test_bottom_left_bracket(self, thickness, x, y, length, line):
         assert classify_regmark_component(
@@ -65,16 +67,17 @@ class TestClassifyRegmarkComponent(object):
         ) == RegmarkBottomLeftBracket(
             x=x - (thickness/2.0),
             y=y + (thickness/2.0),
-            length=length,
+            length=pytest.approx(length),
             thickness=thickness,
         )
     
     @pytest.mark.parametrize("thickness", [0.5, 1])
     @pytest.mark.parametrize("x,y,length,line", [
-        (x, y, length, [(x-length, y), (x, y), (x, y+length)][::order])
+        (x, y, length, [(x-length+float_error, y), (x, y), (x, y+length-float_error)][::order])
         for x, y in [(0, 0), (50, 100)]
         for length in [15.5, 20]
         for order in [1, -1]
+        for float_error in [0, 0.000001]
     ])
     def test_top_right_bracket(self, thickness, x, y, length, line):
         assert classify_regmark_component(
@@ -84,7 +87,7 @@ class TestClassifyRegmarkComponent(object):
         ) == RegmarkTopRightBracket(
             x=x + (thickness/2.0),
             y=y - (thickness/2.0),
-            length=length,
+            length=pytest.approx(length),
             thickness=thickness,
         )
     
@@ -188,6 +191,18 @@ class TestIsLinePartOfRegmark(object):
             line_thickness=2,
         )
     
+    @pytest.fixture
+    def spec_with_float_errors(self):
+        return RegmarkSpecification(
+            x=10.000001,
+            y=20.000001,
+            width=100.000001,
+            height=200.00001,
+            box_size=5.000001,
+            line_length=20.000001,
+            line_thickness=2.000001,
+        )
+    
     @pytest.mark.parametrize("colour", [None, (1, 1, 1, 1), (0, 0, 0, 1)])
     @pytest.mark.parametrize("thickness", [None, 1])
     def test_empty_line(self, spec, colour, thickness):
@@ -207,8 +222,10 @@ class TestIsLinePartOfRegmark(object):
         # Box is the wrong colour
         (False, (1, 1, 1, 1), 2, [(11, 21), (14, 21), (14, 24), (11, 24), (11, 21)]),
     ])
-    def test_box(self, spec, colour, thickness, line, expectation):
+    def test_box(self, spec, spec_with_float_errors, colour, thickness, line, expectation):
         assert spec.is_line_part_of_regmark(
+            colour, thickness, line) is expectation
+        assert spec_with_float_errors.is_line_part_of_regmark(
             colour, thickness, line) is expectation
     
     @pytest.mark.parametrize("expectation,colour,thickness,line", [
@@ -231,8 +248,10 @@ class TestIsLinePartOfRegmark(object):
         # Brackets which are too thick
         (False, (0, 0, 0, 1), 4, [(12, 199), (12, 218), (32, 218)]),
     ])
-    def test_bottom_left_bracket(self, spec, colour, thickness, line, expectation):
+    def test_bottom_left_bracket(self, spec, spec_with_float_errors, colour, thickness, line, expectation):
         assert spec.is_line_part_of_regmark(
+            colour, thickness, line) is expectation
+        assert spec_with_float_errors.is_line_part_of_regmark(
             colour, thickness, line) is expectation
     
     @pytest.mark.parametrize("expectation,colour,thickness,line", [
@@ -255,36 +274,48 @@ class TestIsLinePartOfRegmark(object):
         # Brackets which are too thick
         (False, (0, 0, 0, 1), 4, [(88, 22), (108, 22), (108, 42)]),
     ])
-    def test_top_right_bracket(self, spec, colour, thickness, line, expectation):
+    def test_top_right_bracket(self, spec, spec_with_float_errors, colour, thickness, line, expectation):
         assert spec.is_line_part_of_regmark(
+            colour, thickness, line) is expectation
+        assert spec_with_float_errors.is_line_part_of_regmark(
             colour, thickness, line) is expectation
         
 
 
 class TestFindRegmarks(object):
     
+    @pytest.mark.parametrize("float_error", [0, 0.000001])
     @pytest.mark.parametrize("required_box_size", [None, 5])
     @pytest.mark.parametrize("required_line_length", [None, 20])
     @pytest.mark.parametrize("required_line_thickness", [None, 2])
     def test_just_regmarks(self,
+                           float_error,
                            required_box_size,
                            required_line_length,
                            required_line_thickness):
         regmarks = find_regmarks([
-            ((0, 0, 0, 1), 2, [(21, 11), (24, 11), (24, 14), (21, 14), (21, 11)]),
-            ((0, 0, 0, 1), 2, [(80, 11), (100, 11), (100, 31)]),
-            ((0, 0, 0, 1), 2, [(21, 50), (21, 70), (41, 70)]),
+            ((0, 0, 0, 1), 2+float_error, [(21, 11),
+                                           (24+float_error, 11),
+                                           (24+float_error, 14-float_error),
+                                           (21, 14-float_error),
+                                           (21, 11)]),
+            ((0, 0, 0, 1), 2+float_error, [(80, 11+float_error),
+                                           (100, 11+float_error),
+                                           (100, 31)]),
+            ((0, 0, 0, 1), 2-float_error, [(21-float_error, 50),
+                                           (21-float_error, 70),
+                                           (41, 70)]),
         ], required_box_size, required_line_length, required_line_thickness)
         
-        assert regmarks.x == 20
-        assert regmarks.y == 10
+        assert regmarks.x == pytest.approx(20)
+        assert regmarks.y == pytest.approx(10)
         
-        assert regmarks.width == 81
-        assert regmarks.height == 61
+        assert regmarks.width == pytest.approx(81)
+        assert regmarks.height == pytest.approx(61)
         
-        assert regmarks.box_size == 5
-        assert regmarks.line_thickness == 2
-        assert regmarks.line_length == 20
+        assert regmarks.box_size == pytest.approx(5)
+        assert regmarks.line_thickness == pytest.approx(2)
+        assert regmarks.line_length == pytest.approx(20)
     
     def test_box_thickness_can_be_different(self):
         regmarks = find_regmarks([

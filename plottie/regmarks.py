@@ -6,7 +6,7 @@ the documentation for
 :py:meth:`py_silhouette.SilhouetteDevice.zero_on_registration_mark`.
 """
 
-from collections import defaultdict
+import math
 
 from attr import attrs, attrib
 
@@ -70,6 +70,15 @@ def classify_regmark_component(colour, thickness, line):
     For internal use. Given a line, classify what part of a registration mark
     it could be.
     
+    .. note::
+        This function will accept small floating point errors in line length
+        euqality checks. The reported size/length of the returned feature is
+        chosen arbitrarily from the measured values encountered.
+        
+        The function does *not* tolerate floating point errors in coordinates
+        which should be coincident (i.e. the closing of a box) and horizontal
+        and vertical lines *must* be exactly horizontal and vertical.
+    
     Parameters
     ----------
     colour: (r, g, b, a) or None
@@ -109,8 +118,6 @@ def classify_regmark_component(colour, thickness, line):
         # We've found a non-horizontal/vertical line which definately isn't
         # part of a registration mark.
         if is_horizontal is is_vertical:
-            print("Not h or v")
-            print(x1, y1, x2, y2)
             return None
         
         # Make sure the line orientation alternates
@@ -119,8 +126,6 @@ def classify_regmark_component(colour, thickness, line):
         elif (last_is_horizontal == is_horizontal or
                 last_is_horizontal != is_vertical):
             # Repeated horizontal/vertical line: not a regmark.
-            print("Same orientation as last segment")
-            print(last_is_horizontal, is_horizontal, is_vertical)
             return None
         last_is_horizontal = is_horizontal
         
@@ -128,8 +133,7 @@ def classify_regmark_component(colour, thickness, line):
         length = x2 - x1 if is_horizontal else y2 - y1
         if last_length is None:
             last_length = abs(length)
-        elif last_length != abs(length):
-            print("Lines different lengths")
+        elif not math.isclose(last_length, abs(length), rel_tol=1e-6):
             return None
         
         segment_polarities.append(length >= 0)
@@ -221,6 +225,11 @@ class RegmarkSpecification(object):
         
         .. note:
 
+            This function will tolerate small errors of 1e-6 or less in line
+            lengths to handle floating point errors in the input.
+        
+        .. note:
+
             If a document (eroneously) has several overlapping registration
             marks with differing box-sizes/lengths/thicknesses brackets which
             are entirely covered by the brackets in this regmark are also
@@ -242,23 +251,23 @@ class RegmarkSpecification(object):
             return False
         elif isinstance(c, RegmarkBox):
             return (
-                c.x == self.x and
-                c.y == self.y and
-                c.size <= self.box_size
+                math.isclose(c.x, self.x, rel_tol=1e-6) and
+                math.isclose(c.y, self.y, rel_tol=1e-6) and
+                c.size <= (self.box_size * (1.0+1e-6))
             )
         elif isinstance(c, RegmarkBottomLeftBracket):
             return (
-                c.x == self.x and
-                c.y == self.y + self.height and
-                c.length <= self.line_length and
-                c.thickness <= self.line_thickness
+                math.isclose(c.x, self.x, rel_tol=1e-6) and
+                math.isclose(c.y, self.y + self.height, rel_tol=1e-6) and
+                c.length <= (self.line_length * (1.0+1e-6)) and
+                c.thickness <= (self.line_thickness * (1.0+1e-6))
             )
         elif isinstance(c, RegmarkTopRightBracket):
             return (
-                c.x == self.x + self.width and
-                c.y == self.y and
-                c.length <= self.line_length and
-                c.thickness <= self.line_thickness
+                math.isclose(c.x, self.x + self.width, rel_tol=1e-6) and
+                math.isclose(c.y, self.y, rel_tol=1e-6) and
+                c.length <= (self.line_length * (1.0+1e-6)) and
+                c.thickness <= (self.line_thickness * (1.0+1e-6))
             )
         else:
             assert False
@@ -275,7 +284,8 @@ def find_regmarks(outlines,
     .. note::
     
         Because this function only takes outlines as an argument, the
-        upper-left box in the registration mark *must* be stroked.
+        upper-left box in the registration mark *must* be stroked for it to be
+        found.
     
     Parameters
     ----------
@@ -283,15 +293,27 @@ def find_regmarks(outlines,
         A series of lines from an SVG. ``colour`` should be a tuple (r, g, b,
         a) or None. ``thickness`` should be a float or None. ``line`` should be
         a list of (x, y) tuples.
+        
+        The provided registration mark lines are allowed to be misaligend by a
+        factor of 1e-6 to tolerate floating point errors during their
+        transformation. Horizontal and vertical lines and coincident points
+        *must* be numerically exactly horizontal, vertical and coincident
+        respectively.
     required_box_size : float or None
         If specified, ignore registration marks whose upper-left box is not
-        this size.
+        this size. This quantity is allowed to differ from the requred value by
+        a relative factor of 1e-6 to tolerate floating point errors in
+        the generation of the outline list.
     required_line_length : float or None
         If specified, ignore registration marks whose brackets are not this
-        length.
+        length. This quantity is allowed to differ from the requred value by
+        a relative factor of 1e-6 to tolerate floating point errors in
+        the generation of the outline list.
     required_line_thickness : float or None
         If specified, ignore registration marks whose brackets are not this
-        thickness.
+        thickness. This quantity is allowed to differ from the requred value by
+        a relative factor of 1e-6 to tolerate floating point errors in
+        the generation of the outline list.
 
     Returns
     -------
@@ -302,48 +324,59 @@ def find_regmarks(outlines,
         
         If no regmarks were found, None is returned.
     """
-    # A list of all boxes [RegmarkBox, ...]
+    # [RegmarkBox, ...]
     boxes = []
     
-    # A dictionary {x: [RegmarkBottomLeftBracket, ...], ...} giving the
-    # bottom-left corner brackets at a specified x-offset.
-    bl_brackets = defaultdict(list)
+    # [RegmarkBottomLeftBracket, ...]
+    bl_brackets = []
     
-    # A dictionary {(y, length, thickness): [RegmarkTopRightBracket, ...], ...}
-    # giving the top-right corner brackets with a specified y-offset, length
-    # and thickness.
-    tr_brackets = defaultdict(list)
+    # [RegmarkTopRightBracket, ...]
+    tr_brackets = []
     
     for colour, thickness, line in outlines:
         c = classify_regmark_component(colour, thickness, line)
-        if isinstance(c, RegmarkBox):
-            if required_box_size is None or c.size == required_box_size:
-                boxes.append(c)
-        elif isinstance(c, RegmarkBottomLeftBracket):
-            if ((required_line_length is None or c.length == required_line_length) and
-                    (required_line_thickness is None or c.thickness == required_line_thickness)):
-                bl_brackets[c.x].append(c)
-        elif isinstance(c, RegmarkTopRightBracket):
-            if ((required_line_length is None or c.length == required_line_length) and
-                    (required_line_thickness is None or c.thickness == required_line_thickness)):
-                tr_brackets[(c.y, c.length, c.thickness)].append(c)
+        if isinstance(c, RegmarkBox) and (
+                required_box_size is None or
+                math.isclose(c.size, required_box_size, rel_tol=1e-6)):
+            boxes.append(c)
+        elif isinstance(c, RegmarkBracket) and (
+                (required_line_length is None or
+                    math.isclose(c.length, required_line_length, rel_tol=1e-6)) and
+                (required_line_thickness is None or
+                    math.isclose(c.thickness, required_line_thickness, rel_tol=1e-6))):
+            if isinstance(c, RegmarkBottomLeftBracket):
+                bl_brackets.append(c)
+            if isinstance(c, RegmarkTopRightBracket):
+                tr_brackets.append(c)
     
     # Find all matching pairings of boxes and brackets
     #
     # [RegmarkSpecification, ...]
-    regmarks = []
-    for box in boxes:
-        for bl_bracket in bl_brackets[box.x]:
-            for tr_bracket in tr_brackets[(box.y, bl_bracket.length, bl_bracket.thickness)]:
-                regmarks.append(RegmarkSpecification(
-                    x=box.x,
-                    y=box.y,
-                    width=tr_bracket.x - box.x,
-                    height=bl_bracket.y - box.y,
-                    box_size=box.size,
-                    line_length=bl_bracket.length,
-                    line_thickness=bl_bracket.thickness,
-                ))
+    regmarks = [
+        RegmarkSpecification(
+            x=box.x,
+            y=box.y,
+            width=tr_bracket.x - box.x,
+            height=bl_bracket.y - box.y,
+            box_size=box.size,
+            line_length=bl_bracket.length,
+            line_thickness=bl_bracket.thickness,
+        )
+        for box in boxes
+        for bl_bracket in bl_brackets
+        for tr_bracket in tr_brackets
+        if (
+            # Bottom left bracket should be at the bottom-left corner
+            math.isclose(box.x, bl_bracket.x, rel_tol=1e-6) and
+            box.y + box.size < bl_bracket.y - bl_bracket.length and
+            # Top right bracket should be at the bottom-left corner
+            math.isclose(box.y, tr_bracket.y, rel_tol=1e-6) and
+            box.x + box.size < tr_bracket.x - bl_bracket.length and
+            # Brackets should be same size/thickness
+            math.isclose(bl_bracket.length, tr_bracket.length, rel_tol=1e-6) and
+            math.isclose(bl_bracket.thickness, tr_bracket.thickness, rel_tol=1e-6)
+        )
+    ]
     
     # Return the outer-most regmarks found
     if not regmarks:
