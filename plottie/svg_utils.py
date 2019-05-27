@@ -244,7 +244,6 @@ def is_inkscape_layer_visible(tag):
         return True
     else:
         match = re.match(r"(^|.*;)\s*display\s*:\s*none\s*($|;.*)", style)
-        print(match is None)
         return match is None
 
 
@@ -268,37 +267,3 @@ def set_svg_visibility(tag, visibility):
         tag.attrib["style"] = style
     else:
         tag.attrib.pop("style", None)
-
-
-def find_inkscape_layers(root):
-    """
-    Given an ElementTree-parsed Inkscape-generated SVG file, return an
-    OrderedDict of new ElementTrees containing a complete SVG with only a
-    single layer. Each entry is identified by a tuple giving the heirarchy of
-    layer names. An entry keyed with an empty tuple contains all SVG elements
-    not within one of the other layers.
-    """
-    assert root.tag == "svg" or root.tag == "{{{}}}svg".format(SVG_NAMESPACE)
-    
-    # Find all layers (and their depth in the XML tree). NB, we also include
-    # the original root to capture any objects not on a layer.
-    layers = list(filter(is_inkscape_layer, root.iter()))
-    indices = [xml_deep_child_index(root, layer) for layer in layers]
-    
-    # Layers are stored in drawing order in the file so the 'first' layer
-    # listed in Inkscape is the last one in the file. To produce an ordering
-    # identical to that in Inkscape's GUI, we must reverse the order within
-    # each level of the heirarchy.
-    indices, layers = zip(*sorted(zip(indices, layers),
-                                  key=lambda il: tuple(-i for i in il[0])))
-    
-    # Get the hierarchy of layer names
-    labels = [
-        tuple(get_inkscape_layer_label(tag)
-              for tag in (xml_get_at_index(root, index[:i])
-                          for i in range(len(index) + 1))
-              if is_inkscape_layer(tag))
-        for index, tag in zip(indices, layers)
-    ]
-    
-    return OrderedDict(zip(labels, layers))
