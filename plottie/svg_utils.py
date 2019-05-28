@@ -234,10 +234,9 @@ def get_inkscape_layer_label(tag):
     return tag.attrib.get("{{{}}}label".format(INKSCAPE_NAMESPACE))
 
 
-def is_inkscape_layer_visible(tag):
+def is_visible(tag):
     """
-    Given an inkscape layer 'g' tag, return True if it is visible and False if
-    hidden.
+    Given an svg tag, return True if it is visible and False if hidden.
     """
     style = tag.attrib.get("style")
     if style is None:
@@ -247,7 +246,7 @@ def is_inkscape_layer_visible(tag):
         return match is None
 
 
-def set_svg_visibility(tag, visibility):
+def set_visibility(tag, visibility):
     """
     Given an SVG tag, mutate it to add or remove 'display:none' to the style
     attribute.
@@ -267,3 +266,19 @@ def set_svg_visibility(tag, visibility):
         tag.attrib["style"] = style
     else:
         tag.attrib.pop("style", None)
+
+
+def make_nodes_visible(root, predicate):
+    """
+    Given an SVG document root and a predicate function, make all elements
+    which the predicate returns True for visible and all others hidden.
+    """
+    if predicate(root):
+        set_visibility(root, True)
+        return True
+    else:
+        child_is_visible = False
+        for child in root:
+            child_is_visible |= make_nodes_visible(child, predicate)
+        set_visibility(root, child_is_visible)
+        return child_is_visible

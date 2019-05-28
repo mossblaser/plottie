@@ -9,9 +9,9 @@ from plottie.svg_utils import (
     css_colour_to_rgba,
     is_inkscape_layer,
     get_inkscape_layer_label,
-    is_inkscape_layer_visible,
-    set_svg_visibility,
-    find_inkscape_layers,
+    is_visible,
+    set_visibility,
+    make_nodes_visible,
 )
 
 
@@ -376,7 +376,7 @@ def test_get_inkscape_layer_label():
 
 
 @pytest.mark.parametrize("xmlns_line", ["", 'xmlns="http://www.w3.org/2000/svg"'])
-def test_is_inkscape_layer_visible(xmlns_line):
+def test_is_visible(xmlns_line):
     svg = ElementTree.fromstring("""<?xml version="1.0" encoding="UTF-8" standalone="no"?>
         <svg
            {}
@@ -413,11 +413,11 @@ def test_is_inkscape_layer_visible(xmlns_line):
         </svg>
     """.format(xmlns_line))
     
-    assert is_inkscape_layer_visible(svg[0]) is True
-    assert is_inkscape_layer_visible(svg[1]) is False
-    assert is_inkscape_layer_visible(svg[2]) is False
-    assert is_inkscape_layer_visible(svg[3]) is True
-    assert is_inkscape_layer_visible(svg[4]) is True
+    assert is_visible(svg[0]) is True
+    assert is_visible(svg[1]) is False
+    assert is_visible(svg[2]) is False
+    assert is_visible(svg[3]) is True
+    assert is_visible(svg[4]) is True
 
 
 class TestSetSvgVisibility(object):
@@ -461,47 +461,91 @@ class TestSetSvgVisibility(object):
         """)
     
     def test_show(self, svg):
-        set_svg_visibility(svg[0], True)
+        set_visibility(svg[0], True)
         assert "style" not in svg[0].attrib
         
-        set_svg_visibility(svg[1], True)
+        set_visibility(svg[1], True)
         assert "style" not in svg[1].attrib
         
-        set_svg_visibility(svg[2], True)
+        set_visibility(svg[2], True)
         assert sorted(map(str.strip, svg[2].attrib["style"].split(";"))) == [
             "baz : qux",
             "foo : bar",
         ]
         
-        set_svg_visibility(svg[3], True)
+        set_visibility(svg[3], True)
         assert "style" not in svg[3].attrib
         
-        set_svg_visibility(svg[4], True)
+        set_visibility(svg[4], True)
         assert sorted(map(str.strip, svg[4].attrib["style"].split(";"))) == [
             "baz:qux",
             "foo:bar",
         ]
     
     def test_hide(self, svg):
-        set_svg_visibility(svg[0], False)
+        set_visibility(svg[0], False)
         assert svg[0].attrib["style"] == "display:none"
         
-        set_svg_visibility(svg[1], False)
+        set_visibility(svg[1], False)
         assert svg[1].attrib["style"] == "display:none"
         
-        set_svg_visibility(svg[2], False)
+        set_visibility(svg[2], False)
         assert sorted(map(str.strip, svg[2].attrib["style"].split(";"))) == [
             "baz : qux",
             "display:none",
             "foo : bar",
         ]
         
-        set_svg_visibility(svg[3], False)
+        set_visibility(svg[3], False)
         assert svg[3].attrib["style"] == "display:none"
         
-        set_svg_visibility(svg[4], False)
+        set_visibility(svg[4], False)
         assert sorted(map(str.strip, svg[4].attrib["style"].split(";"))) == [
             "baz:qux",
             "display:none",
             "foo:bar",
         ]
+
+
+class TestMakeNodesVisible(object):
+    
+    def test_all_at_same_level(self):
+        svg = ElementTree.fromstring(
+            """<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+                <svg xmlns="http://www.w3.org/2000/svg" >
+                  <g class=""></g>
+                  <g class="target"></g>
+                  <g class="" style="display:none"></g>
+                  <g class="target" style="display:none"></g>
+                </svg>
+            """
+        )
+        
+        make_nodes_visible(svg, lambda n: n.attrib.get("class") == "target")
+        
+        assert is_visible(svg[0]) is False
+        assert is_visible(svg[1]) is True
+        assert is_visible(svg[2]) is False
+        assert is_visible(svg[3]) is True
+    
+    def test_nested_not_changed(self):
+        svg = ElementTree.fromstring(
+            """<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+                <svg xmlns="http://www.w3.org/2000/svg" >
+                  <g class="target" style="display:none">
+                    <g></g>
+                    <g style="display:none"></g>
+                  </g>
+                  <g></g>
+                  <g style="display:none"></g>
+                </svg>
+            """
+        )
+        
+        make_nodes_visible(svg, lambda n: n.attrib.get("class") == "target")
+        
+        assert is_visible(svg[0]) is True
+        assert is_visible(svg[0][0]) is True
+        assert is_visible(svg[0][1]) is False  # Not changed
+        assert is_visible(svg[1]) is False
+        assert is_visible(svg[2]) is False
