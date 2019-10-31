@@ -31,6 +31,11 @@ setup(
     ],
     keywords="svg plotter cutter silhouette",
 
-    # Requirements
-    install_requires=["svgoutline", "py_silhouette", "attrs"],
+    install_requires=["svgoutline", "py_silhouette", "attrs", "toposort"],
+    
+    entry_points={
+        "console_scripts": [
+            "plottie = plottie.cli:main",
+        ],
+    }
 )
