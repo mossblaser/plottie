@@ -54,28 +54,6 @@ range).
 """
 
 
-def absolute_or_percentage_within(string, low, high):
-    """
-    Parse a string giving a value as either an absolute float value or a
-    percentage. Throws a ValueError when outside the stated range.
-    """
-    string = string.strip()
-    
-    # Parse value
-    if string.endswith("%"):
-        perc = float(string.rstrip("%")) / 100.0
-        value = low + ((high - low) * perc)
-    else:
-        value = float(string)
-    
-    # Check range
-    if not (low <= value <= high):
-        raise ValueError("Value must be between {} and {}".format(
-            low, high))
-    
-    return value
-
-
 def make_layer_matcher(regex):
     """
     Return a function which takes a ElementTree node and tests whether it is an
@@ -99,7 +77,7 @@ def make_id_matcher(id):
     the specified ID.
     """
     def matcher(node):
-        return node.attrs.get("id") == id
+        return node.attrib.get("id") == id
     
     return matcher
 
@@ -110,7 +88,7 @@ def make_class_matcher(classname):
     the specified class.
     """
     def matcher(node):
-        return classname in node.attrs.get("class", "").split()
+        return classname in node.attrib.get("class", "").split()
     
     return matcher
 
@@ -197,7 +175,7 @@ def make_argument_parser():
             others. The default behaviour for inkscape SVGs is to select only
             layers whose names match the regular expression '{}' when cutting
             or '{}' when plotting. If no matching Inkscape layers are found,
-            `--unchanged` mode is used.
+            `--all` mode is used.
         """.format(
             CUT_LAYER_NAMES_REGEX.pattern,
             PLOT_LAYER_NAMES_REGEX.pattern,
@@ -205,7 +183,7 @@ def make_argument_parser():
     )
     
     object_visibility.add_argument(
-        "--unchanged", "-U",
+        "--all", "-a",
         action="store_true",
         help="""
             Plot or cut outlines visible in the unchanged SVG.
@@ -357,7 +335,9 @@ def make_argument_parser():
     
     registration_parameters.add_argument(
         "--manual-regmarks",
-        nargs=4, metavar=("X-OFFSET", "Y-OFFSET", "WIDTH", "HEIGHT"), dest="regmarks",
+        nargs=4,
+        metavar=("X-OFFSET", "Y-OFFSET", "WIDTH", "HEIGHT"),
+        dest="regmarks",
         help="""
             Command the plotter to find registration marks denoting an area WIDTH x
             HEIGHT which is (X-OFFSET, Y-OFFSET) from the top-left of the input
@@ -430,11 +410,9 @@ def parse_svg_argument(parser, args):
     try:
         args.svg = ElementTree.parse(args.svg).getroot()
     except (IOError, SystemError):
-        parser.error("SVG file must be exist and be readable.")
+        parser.error("{} does not exist or cannot be read".format(args.svg))
     except ElementTree.ParseError as e:
         parser.error("SVG file must be valid XML: {}".format(str(e)))
-    except ValueError as e:
-        parser.error("SVG file has unknown dimensions: {}".format(str(e)))
     logging.info("Loaded SVG")
 
 
@@ -469,13 +447,13 @@ def parse_device_arguments(parser, args):
 
 def parse_visibility_arguments(parser, args):
     # Check that filters don't conflict
-    if args.visible_object_matchers is not None and args.unchanged:
+    if args.visible_object_matchers is not None and args.all:
         parser.error("""
-            --unchanged cannot be used with --layer, --id or --class
+            --all cannot be used with --layer, --id or --class
         """)
     
     # Add default filters
-    if not args.unchanged and args.visible_object_matchers is None:
+    if not args.all and args.visible_object_matchers is None:
         # Check to see if at least one layer is found and matched by the
         # default regexes before adding that as a filter (if not don't add any
         # filters)
@@ -485,6 +463,28 @@ def parse_visibility_arguments(parser, args):
             matcher = make_layer_matcher(PLOT_LAYER_NAMES_REGEX.pattern)
         if list(filter(matcher, args.svg.iter())):
             args.visible_object_matchers = [matcher]
+
+
+def absolute_or_percentage_within(string, low, high):
+    """
+    Parse a string giving a value as either an absolute float value or a
+    percentage. Throws a ValueError when outside the stated range.
+    """
+    string = string.strip()
+    
+    # Parse value
+    if string.endswith("%"):
+        perc = float(string.rstrip("%")) / 100.0
+        value = low + ((high - low) * perc)
+    else:
+        value = float(string)
+    
+    # Check range
+    if not (low <= value <= high):
+        raise ValueError("Value must be between {} and {}".format(
+            low, high))
+    
+    return value
 
 
 def parse_speed_and_force(parser, args):
@@ -510,7 +510,7 @@ def parse_regmarks(parser, args):
     if args.regmarks is False:
         # Regmark use is disabled
         args.regmarks = None
-    elif isinstance(args.regmarks, tuple):
+    elif isinstance(args.regmarks, list):
         # Manual regmarks
         try:
             svg_width, svg_height = get_svg_page_size(args.svg)
@@ -631,6 +631,19 @@ def args_to_outlines(args):
         )
     ]
     
+    # Offset line coordinates according to registration marks
+    if args.regmarks is not None:
+        filtered_lines = [
+            [
+                (
+                    x - args.regmarks.x,
+                    y - args.regmarks.y,
+                )
+                for x, y in line
+            ]
+            for line in filtered_lines
+        ]
+    
     if args.inside_first:
         logging.info("Ordering inner lines first...")
         grouped_lines = group_inside_first(filtered_lines)
@@ -686,6 +699,10 @@ def zero_on_regmarks(device, regmarks):
 
 def main():
     args = parse_arguments()
+    
+    if args is None:
+        return 0
+    
     lines = args_to_outlines(args)
     
     if args.regmarks:
@@ -702,12 +719,14 @@ def main():
     
     for line in lines:
         for i, (x, y) in enumerate(line):
-            args.device.move_to(x, y, i != 0)
+            pen_down = i > 0
+            args.device.move_to(x, y, pen_down)
         args.device.flush()
     
     args.device.move_home()
     args.device.flush()
-
+    
+    return 0
 
 
 if __name__ == "__main__":
