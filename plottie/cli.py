@@ -2,6 +2,8 @@ import sys
 
 import re
 
+import time
+
 from xml.etree import ElementTree
 
 from argparse import ArgumentParser
@@ -155,12 +157,14 @@ def make_argument_parser():
     
     device_selection.add_argument(
         "--enable-dummy-device", "-D",
-        action="store_true",
+        nargs="?", metavar="FILENAME", default=False,
         help="""
             For debugging purposes. If this option is given, a dummy device
             (called 'Dummy Device') will be added to the list of discovered
-            devices. This virtual device silently ignores all commands sent to
-            it.
+            devices and will be used by default. This virtual device silently
+            ignores all commands sent to it. If a filename is given, the
+            cutting or plotting commands sent to the device will be written to
+            the specified SVG file.
         """
     )
     
@@ -369,7 +373,7 @@ def make_argument_parser():
     return parser
 
 
-def enumerate_devices(include_dummy=False):
+def enumerate_devices(include_dummy=False, dummy_filename=None):
     """
     Enumerate all connected devices (including a dummy device, if specified).
     
@@ -388,9 +392,9 @@ def enumerate_devices(include_dummy=False):
         ))
     
     if include_dummy:
-        devices.append((
+        devices.insert(0, (
             "Dummy Device",
-            DummyDevice,
+            partial(DummyDevice, dummy_filename),
         ))
     
     return devices
@@ -417,7 +421,10 @@ def parse_svg_argument(parser, args):
 
 
 def parse_device_arguments(parser, args):
-    devices = enumerate_devices(args.enable_dummy_device)
+    devices = enumerate_devices(
+        args.enable_dummy_device is not False,
+        args.enable_dummy_device,
+    )
     if len(devices) == 0:
         parser.error("No connected devices found.")
     
@@ -697,8 +704,8 @@ def zero_on_regmarks(device, regmarks):
                 sys.exit(1)
 
 
-def main():
-    args = parse_arguments()
+def main(args=None):
+    args = parse_arguments(args)
     
     if args is None:
         return 0
@@ -725,6 +732,9 @@ def main():
     
     args.device.move_home()
     args.device.flush()
+    
+    while args.device.get_state() == py_silhouette.DeviceState.moving:
+        time.sleep(0.5)
     
     return 0
 

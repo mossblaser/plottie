@@ -31,6 +31,7 @@ from plottie.cli import (
     parse_regmarks,
     parse_arguments,
     args_to_outlines,
+    main,
 )
 
 
@@ -759,3 +760,78 @@ class TestArgsToOutlines(object):
             list(self.dereg(green).geoms)
         )
         assert outlines == expected
+
+
+def test_integration(tmpdir):
+    # Just a simple test which feeds a test picture and checks the output of
+    # the dummy SVG.
+    input_filename = str(tmpdir.join("input.svg"))
+    output_filename = str(tmpdir.join("output.svg"))
+    
+    with open(input_filename, "w") as f:
+        f.write("""<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+            <svg
+                xmlns="http://www.w3.org/2000/svg"
+                xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+                width="100mm"
+                height="200mm"
+                viewBox="0 0 100 200"
+            >
+                <g
+                    inkscape:groupmode="layer"
+                    id="regmarks"
+                    inkscape:label="Registration Marks"
+                >
+                    <path fill="black" stroke="black" stroke-width="1" d="
+                        M10.5,10.5
+                        L14.5,10.5
+                        L14.5,14.5
+                        L10.5,14.5
+                        Z
+                    " />
+                    <path fill="none" stroke="black" stroke-width="1" d="
+                        M69.5,10.5
+                        L89.5,10.5
+                        L89.5,30.5
+                    " />
+                    <path fill="none" stroke="black" stroke-width="1" d="
+                        M10.5,69.5
+                        L10.5,89.5
+                        L30.5,89.5
+                    " />
+                </g>
+                <g
+                    inkscape:groupmode="layer"
+                    id="cut"
+                    inkscape:label="Cutting"
+                >
+                    <path fill="none" stroke="#FF0000" stroke-width="1" d="
+                        M50,50
+                        L60,60
+                    " />
+                </g>
+            </svg>
+        """)
+    
+    assert main([input_filename, "--enable-dummy-device", output_filename]) == 0
+    
+    assert open(output_filename).read() == (
+        '<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n'
+        '<svg\n'
+        '  xmlns="http://www.w3.org/2000/svg"\n'
+        '  xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"\n'
+        '  width="80.0mm"\n'
+        '  height="80.0mm"\n'
+        '  viewBox="0 0 80.0 80.0"\n'
+        '>\n'
+        '  <!-- tool_diameter = 0.9 mm -->\n'
+        '  <!-- speed = 1000.0 mm/s -->\n'
+        '  <!-- force = 51.800000000000004 g -->\n'
+        '  <!-- regmarks_used = True -->\n'
+        '  <path\n'
+        '    d="M40.0,40.0L50.0,50.0"\n'
+        '    stroke="hsl(0, 100%, 50%)"\n'
+        '    stroke-width="0.2"\n'
+        '  />\n'
+        '</svg>\n'
+    )
