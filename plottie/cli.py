@@ -1,3 +1,7 @@
+"""
+The ``plottie`` command line interface.
+"""
+
 import sys
 
 import re
@@ -113,11 +117,11 @@ def make_argument_parser():
         "action arguments",
         description="""
             Select what mode the plotter should use: cutting or plotting mode.
-            In cutting mode, additional movements will be made by the plotter
-            to compensate for the movement of the knife within the cartridge.
             If neither argument is used, plottie will attempt to guess whether
             cutting or plotting is required based on Inkscape layer names found
-            in the input SVG and, failing that, will assume cutting.
+            in the input SVG and, failing that, will assume cutting.  In
+            cutting mode, additional movements will be made by the plotter to
+            compensate for the movement of the knife within the cartridge.
         """
     ).add_mutually_exclusive_group()
     
@@ -142,7 +146,7 @@ def make_argument_parser():
         type=str, default="0",
         help="""
             Specify the name (or number) of the device to use. (See
-            --list-devices for device names or numbers). If this argument is
+            --list-devices for device names and numbers). If this argument is
             not given, the first device discovered will be used.
         """
     )
@@ -156,15 +160,15 @@ def make_argument_parser():
     )
     
     device_selection.add_argument(
-        "--enable-dummy-device", "-D",
+        "--use-dummy-device", "-D",
         nargs="?", metavar="FILENAME", default=False,
         help="""
-            For debugging purposes. If this option is given, a dummy device
-            (called 'Dummy Device') will be added to the list of discovered
-            devices and will be used by default. This virtual device silently
-            ignores all commands sent to it. If a filename is given, the
-            cutting or plotting commands sent to the device will be written to
-            the specified SVG file.
+            If this option is given, a dummy device (called 'Dummy Device')
+            will be added to the list of discovered devices and will be used by
+            default. When a filename is given, the cutting or plotting commands
+            sent to the device will be written to the specified file in SVG
+            format. Otherwise, all cutting and plotting commands will be
+            ignored.
         """
     )
     
@@ -174,12 +178,12 @@ def make_argument_parser():
         "object visibility arguments",
         description="""
             These options may be used to control which parts of the SVG will be
-            used during plotting or cutting. These options may be used to force
-            the specified layer or objects to become visible while hiding all
-            others. The default behaviour for inkscape SVGs is to select only
-            layers whose names match the regular expression '{}' when cutting
-            or '{}' when plotting. If no matching Inkscape layers are found,
-            `--all` mode is used.
+            plotted or cut out. The default behaviour for Inkscape SVGs is to
+            select only layers whose names match the regular expression '{}'
+            when cutting or '{}' when plotting (as if specified via --layer).
+            If no matching Inkscape layers are found, `--all` mode is used.
+            Alternatively, the parts of the SVG to plot may be specified
+            explicitly using a combination of the following arguments.
         """.format(
             CUT_LAYER_NAMES_REGEX.pattern,
             PLOT_LAYER_NAMES_REGEX.pattern,
@@ -200,9 +204,9 @@ def make_argument_parser():
         dest="visible_object_matchers", action="append",
         help="""
             Plot or cut visible outlines only on the Inkscape layers whose
-            names match the provided case-insensitive regex. If the layer is
-            not visible, it will be made visible. May be given several times to
-            select multiple layers to plot.
+            names match the provided case-insensitive regex. If any matching
+            layers are not visible, they will be made visible. May be given
+            several times to select multiple layers to plot.
         """,
     )
     
@@ -212,8 +216,8 @@ def make_argument_parser():
         dest="visible_object_matchers", action="append",
         help="""
             Plot or cut only visible outlines for SVG elements which have the
-            specified object ID (or are children of that object). May be given
-            several times to select multiple IDs to plot.
+            specified object ID (or are visible children of that object). May
+            be given several times to select multiple IDs to plot.
         """,
     )
     
@@ -223,8 +227,8 @@ def make_argument_parser():
         dest="visible_object_matchers", action="append",
         help="""
             Plot or cut only visible outlines for SVG elements which have the
-            specified class (or are children of an object with that class). May be
-            given several times to select multiple IDs to plot.
+            specified class (or are visible children of an object with that
+            class). May be given several times to select multiple IDs to plot.
         """,
     )
     
@@ -237,10 +241,10 @@ def make_argument_parser():
         type=css_colour_to_rgba, action="append",
         help="""
             Plot or cut only outlines with the listed stroke colour. Accepts
-            CSS-style hexadecimal colour codes. May be given multiple times to
-            include lines with multiple stroke colours. Lines with gradient or
-            patterned strokes will be ignored. If not specified, all line will
-            be included.
+            CSS-style colour codes. May be given multiple times to include
+            lines with multiple stroke colours. Lines with gradient or
+            patterned strokes will be ignored. If not specified, all stroked
+            lines (of all colours) will be plotted or cut.
         """,
     )
     
@@ -248,18 +252,15 @@ def make_argument_parser():
     
     plotting_parameters = parser.add_argument_group(
         "plotting parameter arguments",
-        description="""
-            Control the ploter's behaviour.
-        """
     )
     
     plotting_parameters.add_argument(
         "--speed", "-S",
         type=str, default="{:.0f}%".format(DEFAULT_TOOL_SPEED_PERC*100),
         help="""
-            The speed with which to plot or cut. Either a floating point number
-            given in mm/s or a floating point percentage ending with a '%%' symbol
-            giving the percentage of the maximum supported speed. Defaults to
+            The speed with which to plot or cut. Either a number
+            given in mm/s or a percentage ending with a '%%' symbol giving the
+            percentage of the supported speed to run at. Defaults to
             %(default)s.
         """,
     )
@@ -268,9 +269,9 @@ def make_argument_parser():
         "--force", "-F",
         type=str, default="{:.0f}%".format(DEFAULT_TOOL_FORCE_PERC*100),
         help="""
-            The force with which to plot or cut. Either a floating point number
-            given in grams or a floating point percentage ending with a '%%' symbol
-            giving the percentage of the maximum supported force. Defaults to
+            The force with which to plot or cut. Either a number given in grams
+            or a percentage ending with a '%%' symbol giving the percentage of
+            the maximum supported force to apply. Defaults to
             %(default)s.
         """,
     )
@@ -303,9 +304,9 @@ def make_argument_parser():
         "--fast-order",
         action="store_true", dest="fast_order", default=True,
         help="""
-            If specified, plots/cuts paths in an order which attempts to reduce
-            the time spent moving. Fast ordering is used by default.  Opposite
-            of `--native-order`.
+            If specified, plot or cut paths in an order which attempts to
+            reduce the time spent moving. Fast ordering is used by default.
+            Opposite of `--native-order`.
         """,
     )
     
@@ -326,14 +327,24 @@ def make_argument_parser():
         "--regmarks", "-r",
         action="store_true", dest="regmarks", default=None,
         help="""
-            Detect registration marks in the input SVG and then use these when
-            plotting. The registration marks must be visible and drawn as a
-            5x5mm stroked-and-filled black square (including stroke thickness)
+            Force detection of registration marks in the input SVG and throw an
+            error if none are found. (By default registration marks will be
+            used if found but no error is thrown if they are not). The
+            registration marks must be visible and drawn as a 5x5mm
+            stroked-and-filled black square (accounting for stroke thickness)
             at the top left and a pair of 'L' brackets 20x20mm at the bottom
             left and top right. The registration marks will be excluded from
             plotting or cutting commands unless `--include-regmarks` is used.
             This is the default mode if registration marks are detected in the
             design.
+        """,
+    )
+    
+    registration_parameters.add_argument(
+        "--no-regmarks", "-R",
+        action="store_false", dest="regmarks",
+        help="""
+            Disables auto-detection of registration marks in the input SVG.
         """,
     )
     
@@ -347,18 +358,9 @@ def make_argument_parser():
             HEIGHT which is (X-OFFSET, Y-OFFSET) from the top-left of the input
             file. CSS-style absolute units should be used for all coordinates and
             dimensions (e.g.  '3mm'). Registration marks at the specified
-            coordinates will be automatically removed from ploting/cuting paths
+            coordinates will be automatically removed from plotting/cutting paths
             unless `--include-regmarks` is used. The registration marks will be
             assumed to have 20mm brackets with 0.5mm black strokes.
-        """,
-    )
-    
-    registration_parameters.add_argument(
-        "--no-regmarks", "-R",
-        action="store_false", dest="regmarks",
-        help="""
-            Do not use registration marks to line up the cutter or plotter,
-            even if they exist in the input SVG.
         """,
     )
     
@@ -366,7 +368,8 @@ def make_argument_parser():
         "--include-regmarks",
         action="store_true", dest="include_regmarks", default=False,
         help="""
-            Keep registration marks in the plotted/cut output.
+            Don't remove registration marks from the SVG before plotting or
+            cutting.
         """,
     )
     
@@ -422,8 +425,8 @@ def parse_svg_argument(parser, args):
 
 def parse_device_arguments(parser, args):
     devices = enumerate_devices(
-        args.enable_dummy_device is not False,
-        args.enable_dummy_device,
+        args.use_dummy_device is not False,
+        args.use_dummy_device,
     )
     if len(devices) == 0:
         parser.error("No connected devices found.")
@@ -579,7 +582,7 @@ def parse_arguments(arg_strings=None):
     args = parser.parse_args(arg_strings)
     
     if args.list_devices:
-        print_device_list(args.enable_dummy_device)
+        print_device_list(args.use_dummy_device)
         return None
     
     parse_svg_argument(parser, args)

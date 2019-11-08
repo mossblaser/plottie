@@ -629,7 +629,7 @@ class TestArgsToOutlines(object):
             
             return parse_arguments([
                 filename,
-                "--enable-dummy-device",
+                "--use-dummy-device",
             ] + shlex.split(arg_string))
         
         return make_args
@@ -813,7 +813,7 @@ def test_integration(tmpdir):
             </svg>
         """)
     
-    assert main([input_filename, "--enable-dummy-device", output_filename]) == 0
+    assert main([input_filename, "--use-dummy-device", output_filename]) == 0
     
     assert open(output_filename).read() == (
         '<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n'

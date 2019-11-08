@@ -19,7 +19,7 @@ CUT_LAYER_NAMES_REGEX = re.compile(r"\bcut(s|ting|out)?|\bedges?",
 Regex matching layer names typically associated with cutting.
 """
 
-PLOT_LAYER_NAMES_REGEX = re.compile(r"\bplo?ts??",
+PLOT_LAYER_NAMES_REGEX = re.compile(r"\bplo?ts?",
                                     re.IGNORECASE)
 """
 Regex matching layer names typically associated with plotting.
