@@ -539,7 +539,6 @@ def parse_regmarks(parser, args):
         discovered_regmarks = find_regmarks(
             svg_to_outlines(args.svg),
             required_box_size=5.0,
-            required_line_length=20.0,
         )
         
         if args.regmarks is True:
