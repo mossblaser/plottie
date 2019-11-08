@@ -333,10 +333,10 @@ def make_argument_parser():
             registration marks must be visible and drawn as a 5x5mm
             stroked-and-filled black square (accounting for stroke thickness)
             at the top left and a pair of 'L' brackets 20x20mm at the bottom
-            left and top right. The registration marks will be excluded from
-            plotting or cutting commands unless `--include-regmarks` is used.
-            This is the default mode if registration marks are detected in the
-            design.
+            left and top right. Strokes should be black and 0.5mm thick. The
+            registration marks will be excluded from plotting or cutting
+            commands unless `--include-regmarks` is used.  This is the default
+            mode if registration marks are detected in the design.
         """,
     )
     
