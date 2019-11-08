@@ -1,81 +1,142 @@
 Plottie: A little plotting/cutting program for Silhouette Plotters
 ==================================================================
 
-This repository contains a command-line tool for plotting and cutting outlines
-from [SVG vector graphics](https://developer.mozilla.org/kab/docs/Web/SVG)
-using the [Silhouette series of desktop
+![A vector design in Inkscape next to a cut-out output](./examples/banner.png)
+
+Plottie is a command-line tool for plotting and cutting outlines from [SVG
+vector graphics](https://developer.mozilla.org/kab/docs/Web/SVG) using the
+[Silhouette series of desktop
 plotters/cutters](https://www.silhouetteamerica.com/).
 
-A note to eager users...
-------------------------
+Key features:
 
-If you've found this repository and are looking for a nice way to use your
-Silhouette plotter, I encourage you to checkout the more friendly
-[Robocut](https://github.com/nosliwneb/robocut) and
-[Inkscape-Silhouette](https://github.com/fablabnbg/inkscape-silhouette))
-packages.
+* **Supports most common SVG features** including beziers, shapes, simple text
+  and dashed lines (via the
+  [`svgoutline`](https://github.com/mossblaser/svgoutline) library).
 
-Though plottie aims to be at least as robust and capable as these two packages,
-it is also a pet project to play with 'interesting' ways of driving the plotter
-and so advanced functionality and the command-line interface may get in the way
-of everyday use...
+* **Supports registration marks** allowing printed shapes to be accurately cut
+  out or scored.
+
+* **Sensible defaults** mean that registration marks, plot mode and the
+  layers to include are usually auto-detected.
+
+* **Selectively filter what to cut or plot** based on colour, layer or SVG
+  object IDs or classes.
+
+* **Cut and mark order optimised for speed and integrity.** For example, when
+  cutting, the inner-most shapes are cut out first so adhesive-free cutting
+  mats can be used. Alternatively, the order used in the provided SVG can be
+  used instead if required.
+
+* **Inkscape-aware** allowing layer names to be used to specify what to cut or
+  plot. Also accounts for incorrect DPI settings in files produced prior to
+  Inkscape v0.92.
 
 
-Example usage
+Usage
+-----
+
+Plottie can be installed from [PyPI](https://pypi.org/project/plottie/) as
+usual:
+
+    $ pip install plottie
+
+In most cases, all you need to do is run `plottie` with your SVG file as
+the argument:
+
+    $ plottie path/to/my/drawing.svg
+
+If you don't have a device attached, you can use the `--use-dummy-device/-D`
+option to instead generate an SVG showing the cuts or marks to be made:
+
+    $ plottie path/to/my/drawing.svg -D cuts_made.svg
+
+By default Plottie will attempt to work out whether you want to cut or plot the
+outlines in the supplied file by looking for Inkscape layer names with names
+like `Cut` or `Plot`. You can override this (or choose the appropriate mode
+for non-Inkscape SVGs) using the `--plot/-p` or `--cut/-c` arguments:
+
+    $ plottie --plot file/to/plot.svg
+
+The speed and force used for cutting and plotting may be specified either in
+mm/s or g (respectively) or as a percentage of the device's supported values
+using the `--speed/-S` and `--force/-F` options.  By default 100% speed and
+20% force are used. For example, these could be overridden when cutting out a
+particularly tough material like so:
+
+    $ plottie --speed 50% --force 100% path/to/my/drawing.svg
+
+By default, Plottie will plot or cut all stroked paths from Inkscape layers
+with names like 'Cut' or 'Plot', making them visible if they are hidden and
+hiding all other layers. Various options are provided for specifying
+alternative filters, for example:
+
+    $ # Include everything already visible
+    $ plottie --all path/to/my/drawing.svg
+    
+    $ # Include only the Inkscape layer called 'Picture Outline'
+    $ plottie --layer "Picture Outline" path/to/my/drawing.svg
+    
+    $ # Include only the object with SVG ID 'object1234' (and its chidren)
+    $ plottie --id object1234 path/to/my/drawing.svg
+    
+    $ # Include just objects (and their children) with SVG class name 'cuttable'
+    $ plottie --class cuttable path/to/my/drawing.svg
+    
+    $ # Include onjects with a red stroke colour
+    $ plottie --colour '#FF0000' path/to/my/drawing.svg
+
+To see the complete set of options, and for more detailed documentation, use
+`--help/-h`.
+
+
+Example files
 -------------
 
-If you provide nothing more than an SVG filename as an argument, plottie will
-attempt to figure out what needs to be done automatically:
+An example Inkscape SVG demonstrating the use of registration marks and cutting
+features is included in
+[`examples/cutting_example.svg`](./examples/cutting_example.svg). This file can
+be directly printed to an A4 page and then cut out using:
 
-    $ plottie drawing.svg
+    $ plottie examples/cutting_example.svg
 
-For a simple SVG, Plottie will immediately start plotting all of the outlined
-shapes in the SVG.
-
-For SVGs generated by Inkscape, Plottie will use the layer names to make a more
-educated guess about what is required. For example, a layer called 'Regmarks'
-is found, Plottie will attempt to make the plotter search for the registration
-marks drawn in that layer. If a layer called 'Plot' or 'Cut' is found, Plottie
-will plot or cut only the outlines from that layer, even if it is hidden.
-
-Plottie can also be controlled more explicitly, for example:
-
-    $ plottie drawing.svg --use-regmarks --cut --colour=FF0000 --speed 100% --force 20%
-
-This command will cut all visible red outlines in an SVG at maximum speed and
-at 20% force.
-
-More complex jobs which involve tool changes can also be performed:
-
-    $ plottie drawing.svg \
-        --cut --colour=FF0000 --speed 100% --force 20% \
-        --plot --layer="Plot Layer 1" --speed 80% --force 80%
-        --plot --layer="Plot Layer 2" --speed 80% --force 80%
-
-By default Plottie will pause the job between tool changes but this can be
-controlled with the `--pause` or `--no-pause` flag.
-
-Plottie has several options which control the order that lines are plotted.
-
-    * `--file-order` will cause lines to be plotted in the same order they are
-      presented in the input file.
-    * `--fast-order` will try to cut nearby lines one after the other.
-    * `--left-to-right` will plot lines in approximately the same order a human
-      might while writing left-to-right, top-to-bottom.
-    * `--innermost-first` will cause lines inside other shapes to be plotted
-      before those which contain them. May be used alongside other options.
-
-The `--fast-order` option is enabled by default when plotting and cutting.
-When cutting, `--innermost-first` mode is also automatically enabled.
+For convenience, a template set of registration marks is also provided in
+[`examples/regmark_template.svg`](./examples/regmark_template.svg) which
+includes correctly sized markers and strokes.
 
 
-See also
---------
+Comparison with other software
+------------------------------
 
-Plottie uses the [`svgoutline`](https://github.com/mossblaser/svgoutline)
-library to extract outlines from SVG files. This library has good support for
-SVG features commonly useful when cutting and plotting (e.g. text and dashed
-lines).
+Plottie is intended to be a relatively robust and featureful tool for cutting
+and plotting using [Silhouette](https://www.silhouetteamerica.com/) plotters
+and cutters.
 
-The [`py_silhouette`](http://github.com/mossblaser/py_silhouette/) library is
-used to control the plotter.
+The official [Silhouette Studio
+software](https://www.silhouetteamerica.com/software) provides a complete
+integrated design and cutting solution. Plottie, by comparison, provides only a
+command-line based cutting/plotting function. All design and drawing tasks are
+deferred to more capable tools (such as [Inkscape](https://inkscape.org/) or
+[Illustrator](https://www.adobe.com/illustrator)). Plottie also works on more
+platforms, including Linux.
+
+There are also numerous other unofficial tools for driving Silhouette plotters,
+most notably [Robocut](https://github.com/nosliwneb/robocut) and
+[Inkscape-Silhouette](https://github.com/fablabnbg/inkscape-silhouette)).
+Unlike Plottie, both of these tools provide graphical interfaces and direct
+integrations with graphics packages such as Inkscape. However, both have
+limitations in terms of their lack of support for some SVG features (notably
+including text and dashed lines). Further, dealing with registration marks and
+selecting layers to print, vs those to plot is typically a fairly manual
+process.
+
+As a command-line only tool, Plottie is not suited to everyone. However, for
+those comfortable with such interfaces, Plottie may arguably be easier and
+quicker to use than the tools above, particularly given its numerous automatic
+features. For particularly complex or batch jobs, Plottie can also be driven as
+part of a shell script.
+
+License
+-------
+
+GNU Lesser General Public License v3 (LGPLv3)

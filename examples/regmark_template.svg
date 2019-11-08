@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="210mm"
+   height="297mm"
+   viewBox="0 0 210 297"
+   version="1.1"
+   id="svg8"
+   inkscape:version="0.92.4 5da689c313, 2019-01-14"
+   sodipodi:docname="regmark_template.svg">
+  <defs
+     id="defs2" />
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="1"
+     inkscape:pageshadow="2"
+     inkscape:zoom="0.71713664"
+     inkscape:cx="396.85039"
+     inkscape:cy="561.25984"
+     inkscape:document-units="mm"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     inkscape:window-width="1340"
+     inkscape:window-height="1044"
+     inkscape:window-x="576"
+     inkscape:window-y="16"
+     inkscape:window-maximized="0" />
+  <metadata
+     id="metadata5">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:groupmode="layer"
+     id="layer3"
+     inkscape:label="Instructions"
+     style="display:inline"
+     sodipodi:insensitive="true">
+    <flowRoot
+       xml:space="preserve"
+       id="flowRoot4796"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:16px;line-height:1.20000005;font-family:'Myriad Pro';-inkscape-font-specification:'Myriad Pro';text-align:justify;letter-spacing:0px;word-spacing:0px;text-anchor:start;display:inline;fill:#729fcf;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       transform="matrix(0.26458333,0,0,0.26458333,7.3172971,-12.714723)"><flowRegion
+         id="flowRegion4798"
+         style="font-size:16px;line-height:1.20000005;text-align:justify;text-anchor:start;fill:#729fcf"><rect
+           id="rect4800"
+           width="352.7919"
+           height="344.42532"
+           x="94.821541"
+           y="171.51543"
+           style="font-size:16px;line-height:1.20000005;text-align:justify;text-anchor:start;fill:#729fcf" /></flowRegion><flowPara
+         id="flowPara4802"
+         style="font-weight:bold;text-align:justify;text-anchor:start;fill:#729fcf">Registration mark template</flowPara><flowPara
+         id="flowPara4804" /><flowPara
+         id="flowPara4819">Copy these registration marks into your design and adjust the bottom-left and top-right corner brackets to fully enclose your design. Make sure to keep the brackets and the square exactly aligned.</flowPara><flowPara
+         id="flowPara4831" /><flowPara
+         id="flowPara4823">Do not to resize the marks, change their colour or change their stroke thickness.</flowPara><flowPara
+         id="flowPara4847" /><flowPara
+         id="flowPara4849">Keep the areas immediately around the marks free from other printed elements.</flowPara><flowPara
+         id="flowPara4883" /><flowPara
+         id="flowPara4885">Keep all lines to be cut/plotted completely within the area bounded by the marks.</flowPara></flowRoot>  </g>
+  <g
+     inkscape:label="Regmarks"
+     inkscape:groupmode="layer"
+     id="layer1"
+     style="display:inline">
+    <path
+       style="opacity:1;fill:none;fill-opacity:1;stroke:#000000;stroke-width:0.5;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+       d="m 131.65343,10.25 h 19.75 V 30"
+       id="rect4775"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="ccc" />
+    <path
+       sodipodi:nodetypes="ccc"
+       inkscape:connector-curvature="0"
+       id="path4778"
+       d="M 30,129.00928 H 10.25 v -19.75001"
+       style="opacity:1;fill:none;fill-opacity:1;stroke:#000000;stroke-width:0.5;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1" />
+    <rect
+       style="display:inline;opacity:1;fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0.5;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+       id="rect4773"
+       width="4.5"
+       height="4.5"
+       x="10.25"
+       y="10.25" />
+  </g>
+</svg>
