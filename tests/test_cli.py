@@ -706,7 +706,7 @@ class TestArgsToOutlines(object):
         assert outlines.difference(expected).is_empty
     
     def test_inside_first_and_optimised(self, make_args, red, green, blue):
-        args = make_args("--all")
+        args = make_args("--all --no-over-cut")
         
         # Re-order points so definition starts with bottom-right corner (which
         # is nearest point to end of red line)
@@ -728,8 +728,66 @@ class TestArgsToOutlines(object):
         )
         assert outlines == expected
     
+    @pytest.mark.parametrize("extra_args", [
+        # In plot mode, no over-cutting should be done
+        "--plot",
+        # Explicitly disable over-cutting
+        "--cut --no-over-cut",
+    ])
+    def test_no_over_cut(self, make_args, red, green, blue, extra_args):
+        args = make_args("--all --fast-order --inside-first " + extra_args)
+        green_shifted = MultiLineString([[
+            (70, 85),
+            (70, 15),
+            (30, 15),
+            (30, 85),
+            (70, 85),
+        ]])
+        # Sanity check
+        assert green_shifted.difference(green).is_empty
+        
+        outlines = MultiLineString(args_to_outlines(args))
+        expected = MultiLineString(
+            list(self.dereg(blue).geoms) +
+            list(self.dereg(red).geoms) +
+            list(self.dereg(green_shifted).geoms)
+        )
+        assert outlines == expected
+    
+    @pytest.mark.parametrize("extra_args,exp_over_cut", [
+        # Over-cut used by default when cutting
+        ("--cut", 1.0),
+        # Default distance
+        ("--cut --over-cut", 1.0),
+        # Distance overridden
+        ("--cut --over-cut 2.5", 2.5),
+        # Custom over-cut specified, overriding default plot mode of no overcut
+        ("--plot --over-cut", 1.0),
+        ("--plot --over-cut 2.5", 2.5),
+    ])
+    def test_over_cut(self, make_args, red, green, blue, extra_args, exp_over_cut):
+        args = make_args("--all --fast-order --inside-first " + extra_args)
+        green_shifted = MultiLineString([[
+            (70, 85),
+            (70, 15),
+            (30, 15),
+            (30, 85),
+            (70, 85),
+            (70, 85 - exp_over_cut),
+        ]])
+        # Sanity check
+        assert green_shifted.difference(green).is_empty
+        
+        outlines = MultiLineString(args_to_outlines(args))
+        expected = MultiLineString(
+            list(self.dereg(blue).geoms) +
+            list(self.dereg(red).geoms) +
+            list(self.dereg(green_shifted).geoms)
+        )
+        assert outlines == expected
+    
     def test_no_inside_first_and_optimised(self, make_args, red, green, blue):
-        args = make_args("--all --no-inside-first")
+        args = make_args("--all --no-inside-first --no-over-cut")
         
         outlines = MultiLineString(args_to_outlines(args))
         expected = MultiLineString(
@@ -740,7 +798,7 @@ class TestArgsToOutlines(object):
         assert outlines == expected
     
     def test_no_inside_first_native_order(self, make_args, red, green, blue):
-        args = make_args("--all --no-inside-first --native-order")
+        args = make_args("--all --no-inside-first --native-order --no-over-cut")
         
         outlines = MultiLineString(args_to_outlines(args))
         expected = MultiLineString(
@@ -751,7 +809,7 @@ class TestArgsToOutlines(object):
         assert outlines == expected
     
     def test_native_order(self, make_args, red, green, blue):
-        args = make_args("--all --native-order")
+        args = make_args("--all --native-order --no-over-cut")
         
         outlines = MultiLineString(args_to_outlines(args))
         expected = MultiLineString(

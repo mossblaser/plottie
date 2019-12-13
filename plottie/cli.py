@@ -44,6 +44,8 @@ from plottie.inside_first import group_inside_first
 
 from plottie.line_ordering import optimise_lines
 
+from plottie.over_cut import over_cut_lines
+
 import logging
 
 
@@ -57,6 +59,11 @@ DEFAULT_TOOL_SPEED_PERC = 1.0
 """
 Default speed to use (in range 0 to 1, a proportion of the device's supported
 range).
+"""
+
+DEFAULT_OVER_CUT = 1.0
+"""
+Default distance to over-cut closed shapes in cut mode (mm).
 """
 
 
@@ -316,6 +323,26 @@ def make_argument_parser():
         help="""
             If specified, plot/cuts paths in the order they appear in the input
             file.  Opposite of `--fast-order`.
+        """,
+    )
+    
+    ordering_parameters.add_argument(
+        "--over-cut",
+        nargs="?", type=float, const=DEFAULT_OVER_CUT, metavar="DISTANCE",
+        dest="over_cut", default=None,
+        help="""
+            Extend closed shapes such that the first 'DISTANCE' mm of the shape
+            is plotted/cut twice. If no value is given, %(const)0.1f mm is
+            assumed. This option is enabled by default in --cut mode and
+            disabled by default in --plot mode.
+        """,
+    )
+    
+    ordering_parameters.add_argument(
+        "--no-over-cut",
+        action="store_const", const=0.0, dest="over_cut",
+        help="""
+            Disable --over-cut mode.
         """,
     )
     
@@ -604,6 +631,13 @@ def parse_arguments(arg_strings=None):
     if args.inside_first is None:
         args.inside_first = True if args.plot_mode == PlotMode.cut else False
     
+    # Set default over-cut distance
+    if args.over_cut is None:
+        if args.plot_mode is PlotMode.cut:
+            args.over_cut = DEFAULT_OVER_CUT 
+        else:
+            args.over_cut = 0
+    
     # Parse and detect regmarks
     parse_regmarks(parser, args)
     
@@ -653,12 +687,14 @@ def args_to_outlines(args):
             for line in filtered_lines
         ]
     
+    # Cut inside lines first if reqired
     if args.inside_first:
         logging.info("Ordering inner lines first...")
         grouped_lines = group_inside_first(filtered_lines)
     else:
         grouped_lines = [filtered_lines]
     
+    # Optimise cutting order
     optimised_lines = []
     if args.fast_order:
         logging.info("Optimising line order...")
@@ -670,6 +706,11 @@ def args_to_outlines(args):
     else:
         for line_group in grouped_lines:
             optimised_lines.extend(line_group)
+    
+    # Over-cut closed shapes if required
+    if args.over_cut:
+        logging.info("Adding over-cut to closed lines...")
+        optimised_lines = over_cut_lines(optimised_lines, args.over_cut)
     
     logging.info(
         "Converted SVG into %d lines and %d line segments",
