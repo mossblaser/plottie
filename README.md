@@ -41,6 +41,8 @@ usual:
 
     $ pip install plottie
 
+> NB: Plottie requires Python 3.5+
+
 In most cases, all you need to do is run `plottie` with your SVG file as
 the argument:
 
