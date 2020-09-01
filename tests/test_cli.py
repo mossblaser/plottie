@@ -371,7 +371,7 @@ class TestAbsoluteOrPercentageWithin(object):
             absolute_or_percentage_within(string, 10000, 11000)
 
 
-class TestSpeedAndForce(object):
+class TestSpeedForceAndDepth(object):
     
     def test_valid_speed(self):
         parser = make_argument_parser()

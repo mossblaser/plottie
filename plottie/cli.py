@@ -283,6 +283,15 @@ def make_argument_parser():
         """,
     )
     
+    plotting_parameters.add_argument(
+        "--auto-blade-depth", "-b",
+        type=int,
+        help="""
+            Set the auto-blade depth setting to use for devices which support
+            it. If this argument is not given, the blade is not adjusted.
+        """,
+    )
+    
     # #########################################################################
     
     ordering_parameters = parser.add_argument_group("plotting and cutting order arguments")
@@ -760,6 +769,11 @@ def main(args=None):
     
     args.device.set_force(args.force)
     args.device.set_speed(args.speed)
+    if args.auto_blade_depth is not None:
+        try:
+            args.device.set_depth(args.auto_blade_depth)
+        except py_silhouette.AutoBladeNotSupportedError:
+            sys.stderr.write("--auto-blade-depth not supported by this device")
     args.device.set_tool_diameter(
         args.device.params.tool_diameters["Knife"]
         if args.plot_mode == PlotMode.cut else
