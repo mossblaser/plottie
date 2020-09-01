@@ -29,7 +29,13 @@ setup(
     ],
     keywords="svg plotter cutter silhouette",
 
-    install_requires=["svgoutline", "py_silhouette", "attrs", "toposort", "enum34"],
+    install_requires=[
+        "svgoutline",
+        "py_silhouette>=0.2.0",
+        "attrs",
+        "toposort",
+        "enum34",
+    ],
     
     entry_points={
         "console_scripts": [

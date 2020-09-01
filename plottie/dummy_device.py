@@ -26,6 +26,7 @@ class DummyDevice(object):
         self.regmarks_used = False
         self.speed = None
         self.force = None
+        self.depth = None
         self.tool_diameter = None
         self.paths = [[(0, 0)]]  # [[(x, y), ...], ...]
     
@@ -49,6 +50,9 @@ class DummyDevice(object):
     
     def set_force(self, force):
         self.force = force
+    
+    def set_depth(self, depth):
+        self.depth = depth
     
     def set_tool_diameter(self, tool_diameter):
         self.tool_diameter = tool_diameter
