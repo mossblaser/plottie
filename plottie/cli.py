@@ -737,11 +737,12 @@ def zero_on_regmarks(device, regmarks):
     """
     while True:
         logging.info("Searching for registration marks...")
+        print(regmarks)
         try:
             device.zero_on_registration_mark(
                 regmarks.width,
                 regmarks.height,
-                box_size=regmarks.box_size,
+                box_size=5.0,
                 line_thickness=regmarks.line_thickness,
                 line_length=regmarks.line_length,
             )

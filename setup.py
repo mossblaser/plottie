@@ -31,7 +31,7 @@ setup(
 
     install_requires=[
         "svgoutline",
-        "py_silhouette>=0.3.0",
+        "py_silhouette>=0.3.1",
         "attrs",
         "toposort",
         "enum34",
